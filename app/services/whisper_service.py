@@ -1,10 +1,20 @@
+import os
+from pyexpat import model
+from unittest import result
 import whisper
 import torch
 import json
 from pathlib import Path
 from app.core.config import settings, BASE_DIR
 
+try:
+    import imageio_ffmpeg
+    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+    os.environ["PATH"] += os.pathsep + str(Path(ffmpeg_path).parent)
+except:
+    pass
 class WhisperService:
+    
     def __init__(self):
         self.model = None
         self.custom_dict = self._load_custom_dict()
@@ -27,13 +37,18 @@ class WhisperService:
         for wrong, correct in self.custom_dict.items():
             text = text.replace(wrong, correct)
         return text
-
+    
     async def transcribe(self, audio_path: str) -> dict:
         model = self._load_model()
         result = model.transcribe(
             audio_path,
             language="id",
-            task="transcribe"
+            task="transcribe",
+            temperature=0.0,
+            best_of=5,
+            beam_size=5,
+            condition_on_previous_text=True,
+            initial_prompt="Transkripsi percakapan dalam Bahasa Indonesia yang baik dan benar."
         )
         transcript = self._apply_custom_dict(result["text"])
         return {
